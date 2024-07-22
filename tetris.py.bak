@@ -35,7 +35,7 @@ def selector_mover(selector, x, y):
 
 def key_guide(curr_window, direction):  
     if curr_window == 0:
-        mainmenu_selector.y = mainmenu_selector.y + 75
+        mainmenu_selector.y = mainmenu_selector.y + 50
         
 def key_menu(curr_window, direction ):    
 # Creating the elements
