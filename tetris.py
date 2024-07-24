@@ -28,6 +28,14 @@ class class_window():
     def __init__(self,name,color,x1,y1,x2,y2):
         self.shape = canvas.create_rectangle((x1,y1,x2,y2), fill=color, width = 0)
         self.name = name
+
+class square():
+    def __init__(self,row,column,a,b):
+        self.row = row
+        self.column = column
+        self.occupier = "black" # color
+        self.shape = canvas.create_rectangle(a,b,a+25,b+25, fill="black", width=0.5, outline = "white")    
+        
         
 canvas = Canvas(interface, bg = 'white', width = 600, height = 600)
 canvas.pack()
@@ -126,6 +134,7 @@ def change_window(new_win):
         global curr_window, prev_window
         prev_window = curr_window
         curr_window = new_win
+
         
 def bring_to_front(window):
     print("THIS IS WINDOW", window)
@@ -133,20 +142,40 @@ def bring_to_front(window):
     print(instance_dict)
     for key in instance_dict.keys():
         value = instance_dict.get(key)
-        print("This is the key",key)
+        print("This is the key",key, ", type", type(key))
         if isinstance(value,button) or isinstance(value,selector):
             print("button FOUND") # I can just put this through the function again.
             bring_to_front(value) # starts another instance of the same function 
+        elif key == "d":
+            # for i in range(len(window.d)):
+                # print("This iss"window.d[i])
+                # canvas.tag_raise(window.d[i].shape)
+            for x in value:
+                print("this is the value", x)
+                canvas.tag_raise(value[x].shape)
         else:
             # print(key)
             # print(type(instance_dict.get(key)))
             canvas.tag_raise(value)
         # canvas.tag_raise(mainmenu_selector.shape)
+
+def suppress_grid(): # This is a fix for something strange that happens when generating the grid. Random squares have a mind of their own and don't respond to the bring_to_front function as they should # Man I really dont want to use this
+    for x in gamewindow.d:
+        print("this is the value", x)
+        canvas.tag_lower(gamewindow.d[x].shape)
             
 # Creating the elements
 
 # Windows - Game
 gamewindow = class_window("gamewindow","grey",0,0,600,600)
+gamewindow.d = {}
+for r in range(1,21):
+    for c in range(1,11):
+        gamewindow.d["square_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25))
+                
+# Windows - Game - Grid
+
+
 
 # Windows - High Score
 highscore = class_window("highscore","blue",0,0,600,600)
@@ -161,6 +190,7 @@ mainmenu.exitbutton = button(225,250,"Exit", "na")
 mainmenu.selector = selector(225,100)
 mainmenu.buttonlist = [mainmenu.startbutton, mainmenu.placeholderbutton, mainmenu.exitbutton]
 
+        
 # Windows - Escape
 escape_window = class_window("escape","orange",150,450,450,150)
 escape_window.active = False
@@ -183,6 +213,8 @@ def debugprint():
     print(curr_window.name, "curr_window")
     print(prev_window.name, "prev_window")
     print(escape_window.active, "escape_window.active")
+ 
+suppress_grid()
     
 interface.bind("x", lambda x: debugprint())    ### DEBUG 
 
