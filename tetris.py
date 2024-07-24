@@ -1,17 +1,10 @@
 from tkinter import *
 import random
 import time
+import sys
 
 interface = Tk()
 interface.geometry("600x600")
-
-# curr_window
-# 0 = main menu
-# 1 = game
-# 2 = high score
-# 3 = escape
-
-curr_window = 0
 
 # Classes
 
@@ -20,25 +13,24 @@ class selector():
         self.x = x
         self.y = y
         self.shape = canvas.create_rectangle((x,y,x+150,y+50), width = 5, outline = "red")
-        self.scope = False
+        self.scope = "Start"
 
 class button():
-    def __init__(self,x,y,name):
+    def __init__(self,x,y,name, tied_window):
         self.x = x 
         self.y = y
         self.name = name
         self.shape = canvas.create_rectangle((x,y,x+150,y+50), fill="grey", width = 2)
-        self.text = canvas.create_text(x+75,y+25,text=name, font=("Arial", 15))        
+        self.text = canvas.create_text(x+75,y+25,text=name, font=("Arial", 15)) 
+        self.tied_window = tied_window
 
-class window():
-    def __init__(self,color,x1,y1,x2,y2):
+class class_window():
+    def __init__(self,name,color,x1,y1,x2,y2):
         self.shape = canvas.create_rectangle((x1,y1,x2,y2), fill=color, width = 0)
+        self.name = name
         
 canvas = Canvas(interface, bg = 'white', width = 600, height = 600)
 canvas.pack()
-
-# canvas.create_rectangle((0,0,600,600), fill="orange", width = 0) REDUNDANT
-# text = canvas.create_text(300,50,text="placeholder", font=("Arial", 24)) REDUNDANT
 
 def selector_mover(selector, delta_x, delta_y):
     print("selector_mover")
@@ -46,118 +38,160 @@ def selector_mover(selector, delta_x, delta_y):
     selector.y += delta_y
     canvas.moveto(selector.shape, selector.x-3, selector.y-3) #these are offset by -3 because otherwise they get offset by the moveto function for some reason
 
-def boundary_checker(selector, delta_y):
+#fluid
+def boundary_checker(curr_window, delta_y):
     print("boundary_checker")
-    for i in range(len(menu_buttonlist)):
-        print(selector.y+delta_y, menu_buttonlist[i].y)
-        if selector.y+delta_y == menu_buttonlist[i].y:
-            print(menu_buttonlist[i].text)
-            return menu_buttonlist[i].text
+    for i in range(len(curr_window.buttonlist)):
+        print(curr_window.selector.y+delta_y, curr_window.buttonlist[i].y)
+        if curr_window.selector.y+delta_y == curr_window.buttonlist[i].y:
+            print(curr_window.buttonlist[i].name)
+            return curr_window.buttonlist[i].name
     else:
         return False
     
 def key_guide(curr_window, direction):
-    if curr_window == 0:
+    if curr_window == mainmenu:
         key_menu(curr_window, direction)
-    if curr_window == 1:
-        pass
-    if curr_window == 2:
-        pass
+    if curr_window == gamewindow:
+        key_game(curr_window, direction)
+    if curr_window == highscore:
+        key_highscore(curr_window, direction)        
+    if curr_window == escape_window:
+        key_escape(curr_window, direction)
+
+def toggle_escape_window(curr_window, direction):
+    if escape_window.active == False:             
+        print("keygame2")
+        bring_to_front(escape_window)
+        change_window(escape_window)
+        escape_window.active = True
+        return
+    if escape_window.active == True:            
+        print("keygame3")
+        bring_to_front(prev_window)
+        change_window(prev_window)
+        escape_window.active = False
+        return
+
+def key_game(curr_window, direction):
+    print("keygame1")
+    if direction == "escape":
+        toggle_escape_window(curr_window, direction)
         
+def key_highscore(curr_window, direction):
+    if direction == "escape":
+        bring_to_front(mainmenu)
+        change_window(mainmenu)
+
+def key_escape(curr_window, direction):
+    if direction == "escape":
+        toggle_escape_window(curr_window, direction)
+    else:
+        print("THIS IS THE CURRENT WINDOW IN KEY_ESCAPE", curr_window.name, direction)
+        key_menu(curr_window, direction)
+        
+
 def key_menu(curr_window, direction):    
     if direction == ("right" or "left"):
         return
     elif direction == "up":
-        d = boundary_checker(mainmenu_selector, -75)
+        d = boundary_checker(curr_window, -75) # this function returns text which is then assigned as an attribute to selector_mover
         if d != False:
-            selector_mover(mainmenu_selector, 0, -75)
-            selector_mover.scope = d
+            selector_mover(curr_window.selector, 0, -75)
+            curr_window.selector.scope = d
     elif direction == "down":
-        d = boundary_checker(mainmenu_selector, 75)
+        d = boundary_checker(curr_window, 75)
         if d != False:
-            selector_mover(mainmenu_selector, 0, 75)
-            selector_mover.scope = d
+            selector_mover(curr_window.selector, 0, 75)
+            curr_window.selector.scope = d
     elif direction == "enter":
-        pass
-        
+        select(curr_window, curr_window.selector)
+        escape_window.active = False     
 
-def select():
-    pass
+def select(curr_window, selector):
+    print("we are here")
+    print(selector.scope)
+    # if selector.scope == "Start":
+        # bring_to_front(gamewindow)
+    for i in range(len(curr_window.buttonlist)):
+        if selector.scope == "Exit":
+            sys.exit()
+        if selector.scope == curr_window.buttonlist[i].name:
+            print("THIS IS IT",curr_window.buttonlist[i].name)
+            bring_to_front(curr_window.buttonlist[i].tied_window)
+            change_window(curr_window.buttonlist[i].tied_window)
+            
+
+def change_window(new_win):
+        global curr_window, prev_window
+        prev_window = curr_window
+        curr_window = new_win
         
 def bring_to_front(window):
+    print("THIS IS WINDOW", window)
     instance_dict = vars(window)
     print(instance_dict)
     for key in instance_dict.keys():
         value = instance_dict.get(key)
-        if isinstance(value, button):
+        print("This is the key",key)
+        if isinstance(value,button) or isinstance(value,selector):
             print("button FOUND") # I can just put this through the function again.
             bring_to_front(value) # starts another instance of the same function 
         else:
             # print(key)
             # print(type(instance_dict.get(key)))
             canvas.tag_raise(value)
-    canvas.tag_raise(mainmenu_selector.shape)
+        # canvas.tag_raise(mainmenu_selector.shape)
             
 # Creating the elements
 
-
-# Windows - Main Menu
-mainmenu = window("orange",0,0,600,600)
-mainmenu.text = canvas.create_text(300,50,text="placeholder", font=("Arial", 24))
-mainmenu.startbutton = button(225,100,"Start")
-mainmenu.placeholderbutton = button(225,175,"placeholder")
-mainmenu.exitbutton = button(225,250,"Exit")
-
 # Windows - Game
-gamewindow = window("grey",0,0,600,600)
+gamewindow = class_window("gamewindow","grey",0,0,600,600)
 
 # Windows - High Score
-highscore = window("blue",0,0,600,600)
+highscore = class_window("highscore","blue",0,0,600,600)
+highscore.text = canvas.create_text(300,50,text="High score", font=("Arial", 24))
+
+# Windows - Main Menu
+mainmenu = class_window("mainmenu","orange",0,0,600,600)
+mainmenu.text = canvas.create_text(300,50,text="Tkinter Tetris", font=("Arial", 24))
+mainmenu.startbutton = button(225,100,"Start", gamewindow)
+mainmenu.placeholderbutton = button(225,175,"High Scores", highscore)
+mainmenu.exitbutton = button(225,250,"Exit", "na")
+mainmenu.selector = selector(225,100)
+mainmenu.buttonlist = [mainmenu.startbutton, mainmenu.placeholderbutton, mainmenu.exitbutton]
 
 # Windows - Escape
-escape = window("green",0,0,600,600)
-
-# Buttons
-# startbutton = button(225,100,"Start")
-# placeholderbutton = button(225,175,"placeholder")
-# exitbutton = button(225,250,"Exit")
-
+escape_window = class_window("escape","orange",150,450,450,150)
+escape_window.active = False
+escape_window.text = canvas.create_text(300,180,text="Game Paused", font=("Arial", 24))
+escape_window.menubutton = button(225,250,"Main Menu", mainmenu)
+escape_window.exitbutton = button(225,325,"Exit", "na")
+escape_window.selector = selector(225,250)
+escape_window.selector.scope = "Main Menu"
+escape_window.buttonlist = [escape_window.menubutton, escape_window.exitbutton]
 
 canvas.tag_raise(mainmenu.shape)
-# for i in range(len(mainmenu.shapelist)):
-    # if hasattr(mainmenu.shapelist[i], "shape"):
-        # canvas.tag_raise(mainmenu.shapelist[i].shape)
-    # if hasattr(mainmenu.shapelist[i], "text"):
-        # canvas.tag_raise(mainmenu.shapelist[i].text)
         
-
-
-mainmenu_selector = selector(225,100)
-
-# canvas.tag_raise(mainmenu.shape)
-
-# Lists
-
-menu_buttonlist = [mainmenu.startbutton, mainmenu.placeholderbutton, mainmenu.exitbutton]
-
+curr_window = mainmenu
+prev_window = "null"
 
 bring_to_front(mainmenu)
 
-# interface.bind("x", lambda x: selector_mover(sele)) ????
+def debugprint():
+    global curr_window, prev_window
+    print(curr_window.name, "curr_window")
+    print(prev_window.name, "prev_window")
+    print(escape_window.active, "escape_window.active")
+    
+interface.bind("x", lambda x: debugprint())    ### DEBUG 
 
-
-interface.bind("x", lambda x: print(selector_mover.scope))    ### DEBUG 
-
-interface.bind("Enter", lambda x: key_guide(curr_window, "enter"))
+interface.bind("<Return>", lambda x: key_guide(curr_window, "enter"))
+interface.bind("<Escape>", lambda x: key_guide(curr_window, "escape"))
 
 interface.bind("<Right>", lambda x: key_guide(curr_window, "right"))
 interface.bind("<Left>", lambda x: key_guide(curr_window, "left"))
 interface.bind("<Up>", lambda x: key_guide(curr_window, "up"))
 interface.bind("<Down>", lambda x: key_guide(curr_window, "down"))
-
-# board.bind("<Right>", lambda x: mover(sele, x=50, y=0))
-# board.bind("<Left>", lambda x: mover(sele, x=-50, y=0))
-# board.bind("<Up>", lambda x: mover(sele, x=0, y=-50))
-# board.bind("<Down>", lambda x: mover(sele, x=0, y=50))
         
 interface.mainloop()
