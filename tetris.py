@@ -32,13 +32,17 @@ class class_window():
         self.name = name
 
 class square():
-    def __init__(self,row,column,a,b):
+    def __init__(self,row,column,a,b,color):
         self.row = row
         self.column = column
         self.a = a
         self.b = b
-        self.occupier = "black" # color
-        self.shape = canvas.create_rectangle(a,b,a+25,b+25, fill="black", width=0.5, outline = "white")    
+        self.occupier = color # color
+        w = 0.5
+        if self.occupier != "black":
+            w = 1
+        self.shape = canvas.create_rectangle(a,b,a+25,b+25, fill=self.occupier, width=w, outline = "white")    
+       
         
         
 canvas = Canvas(interface, bg = 'white', width = 600, height = 600)
@@ -90,14 +94,21 @@ def toggle_escape_window(curr_window, direction):
         change_window(prev_window)
         escape_window.active = False
         game_paused = False
-        g = threading.Thread(target=game_loop, args=()) # threading allows us to input while the loop is being ran. If I use just game_loop(), it won't work
-        g.start()
+        # g = threading.Thread(target=game_loop, args=()) # threading allows us to input while the loop is being ran. If I use just game_loop(), it won't work
+        # g.start()
         return
 
 def key_game(curr_window, direction):
+    global current_stamper
     print("keygame1")
     if direction == "escape":
         toggle_escape_window(curr_window, direction)
+    elif direction == "right":
+        stamp_lr(current_stamper, 25)
+    elif direction == "left":
+        stamp_lr(current_stamper, -25)
+    elif direction == "down":
+        stamp_lower(current_stamper)
         
 def key_highscore(curr_window, direction):
     if direction == "escape":
@@ -130,12 +141,15 @@ def key_menu(curr_window, direction):
         escape_window.active = False     
 
 def select(curr_window, selector):
+    global game_started, force_exit
     print("we are here")
     print(selector.scope)
     # if selector.scope == "Start":
         # bring_to_front(gamewindow)
     for i in range(len(curr_window.buttonlist)):
         if selector.scope == "Exit":
+            force_exit = 1
+            game_started = False
             sys.exit()
         if selector.scope == curr_window.buttonlist[i].name:
             print("THIS IS IT",curr_window.buttonlist[i].name)
@@ -148,19 +162,19 @@ def change_window(new_win):
         prev_window = curr_window
         curr_window = new_win
         if curr_window == mainmenu:
-            game_paused = False
+            game_started = False
+            game_paused = True
             suppress_grid()
             canvas.tag_lower(escape_window.selector.shape) # I've added attributes to a completely unrelated window and it had an impact on the selector in another object. The bring to front
             piece_queue = []
-            if game_started == True:
-                game_started = False
         if curr_window == gamewindow:
+            game_paused = False
             if game_started == False:
                 game_started = True
                 start_message()
-            if game_started == True:
-                g = threading.Thread(target=game_loop, args=()) # threading allows us to input while the loop is being ran. If I use just game_loop(), it won't wor
-                g.start()
+            # if game_started == True:
+                # g = threading.Thread(target=game_loop, args=()) # threading allows us to input while the loop is being ran. If I use just game_loop(), it won't wor
+                # g.start()
 
         
 def bring_to_front(window):
@@ -170,9 +184,7 @@ def bring_to_front(window):
     print(instance_dict)
     for key in instance_dict.keys():
         value = instance_dict.get(key)
-        print("This is the key",key, ", type", type(key))
         if isinstance(value,button) or isinstance(value,selector):
-            print("button FOUND") # I can just put this through the function again.
             bring_to_front(value) # starts another instance of the same function 
         elif key == "score" or key == "level":
             pass
@@ -181,8 +193,10 @@ def bring_to_front(window):
                 # print("This iss"window.d[i])
                 # canvas.tag_raise(window.d[i].shape)
             for x in value:
-                print("this is the value", x)
                 canvas.tag_raise(value[x].shape)
+        elif key == "stamper":
+            for i in value:
+                canvas.tag_raise(window.stamper[i].shape)
         else:
             # print(key)
             # print(type(instance_dict.get(key)))
@@ -190,7 +204,6 @@ def bring_to_front(window):
 
 def suppress_grid(): # This is a fix for something strange that happens when generating the grid. Random squares have a mind of their own and don't respond to the bring_to_front function as they should # Man I really dont want to use this
     for x in gamewindow.d:
-        print("this is the value", x)
         canvas.tag_lower(gamewindow.d[x].shape)
 
 # Status messages
@@ -205,35 +218,89 @@ def delete_message(inv, txt):
     canvas.delete(inv, txt)
 
 def game_loop():
-    global interface, game_paused, piece_queue, counter, current_piece
-    while game_paused == False:
-        counter -= 1
-        while len(piece_queue) < 4:
-            print("appending to piece list")
-            piece_queue_handler(piece_queue)
-        if current_piece == False:
-            current_piece = piece_queue[0]
-            piece_queue.pop(0)
-            piece_placer(current_piece)
-        print(counter)
-        board_updater()
-        time.sleep(0.01)
-        if counter == 0:
-            counter = 200
+    global interface, game_paused, piece_queue, counter, current_piece, current_stamper, gamewindow
+    while True:
+        if force_exit == 1:
+            return
+        while game_started == False and force_exit == 0: # Holds here until the game starts
+            # print("Main Menu")
+            time.sleep(0.01)
+        # print("STARTING")
+        while game_started == True and force_exit == 0: # game paused
+            # print("pause")
+            while game_paused == False and force_exit == 0: # game being ran
+                counter -= 1
+                while len(piece_queue) < 4:
+                    print("appending to piece list")
+                    piece_queue_handler(piece_queue)
+                if current_piece == False:
+                    current_piece = piece_queue[0]
+                    piece_queue.pop(0)
+                    stamp_placer(current_piece) # Shelved
+                print(counter)
+                # board_updater() # Shelved
+                time.sleep(0.01)
+                if counter == 0:
+                    stamp_lower(current_stamper)
+                    counter = 130
+            if curr_window == mainmenu:
+                counter = 130
+                time.sleep(0.01)
+                print("breaking")
+                clear_state()
 
-def piece_placer(current_piece):
-    global pieces_d, gamewindow
-    print("current piece",current_piece)
+def stamp_lower(current_stamper):
+    for x in current_stamper:
+        canvas.moveto(current_stamper[x].shape, current_stamper[x].a, current_stamper[x].b+25)
+        current_stamper[x].b += 25
+
+def stamp_lr(current_stamper, deltax):
+    for i in range(0,4):        
+        if ( (current_stamper["block_{0}".format(i)].a + deltax) < 175 ) or ( (current_stamper["block_{0}".format(i)].a + deltax) > 400 ):
+            return
+    for x in current_stamper:
+        canvas.moveto(current_stamper[x].shape, current_stamper[x].a+deltax, current_stamper[x].b)
+        current_stamper[x].a += deltax
+    
+def clear_state():
+    global gamewindow, current_stamper, piece_queue, current_piece, game_started
+    gamewindow.stamper = {} 
+    current_stamper = {}
+    piece_queue = []
+    current_piece = False
+    
+def stamp_placer(current_piece):
+    global current_stamper, gamewindow, canvas # dictionary which will hold 4 objects which are the squares of the given shape
+    # gamewindow.d["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25))
+    cr_coords = pieces_d[current_piece] # cr_coords = value. Value being a list containing 4 lists
     block_color = color_assign(current_piece)
-    print(pieces_d[current_piece])
-    print(type(pieces_d[current_piece]))
-    for x in pieces_d[current_piece]:
-        x.occupier = block_color
+    for i in range(0,4):
+        print("APPENDING STAMPER")
+        r = cr_coords[i][0]
+        c = cr_coords[i][1]
+        current_stamper["block_{0}".format(i)] = square(r,c,150+(c*25),40+(r*25), block_color)
+    gamewindow.stamper = current_stamper
+    for x in gamewindow.stamper:
+        canvas.tag_raise(current_stamper[x].shape)
 
-def board_updater():
-    global gamewindow, canvas
-    for i in gamewindow.d:
-        gamewindow.d[i].shape = canvas.create_rectangle(gamewindow.d[i].a,gamewindow.d[i].b,gamewindow.d[i].a+25,gamewindow.d[i].b+25, fill=gamewindow.d[i].occupier, width=0.5, outline = "white")
+
+def stamp_carrier():
+    pass
+
+# def piece_placer(current_piece): # old version, Shelved
+    # global pieces_d, gamewindow
+    # print("current piece",current_piece)
+    # block_color = color_assign(current_piece)
+    # print(pieces_d[current_piece])
+    # print(type(pieces_d[current_piece]))
+    # for x in pieces_d[current_piece]:
+        # x.occupier = block_color
+
+# def board_updater(): #I'll keep this shelved for now, not the best solution
+    # global gamewindow, canvas
+    # for i in gamewindow.d:
+        # canvas.delete(gamewindow.d[i].shape) 
+        # gamewindow.d[i].shape = canvas.create_rectangle(gamewindow.d[i].a,gamewindow.d[i].b,gamewindow.d[i].a+25,gamewindow.d[i].b+25, fill=gamewindow.d[i].occupier, width=0.5, outline = "white")
         # canvas.itemconfig(gamewindow.d[i], fill=gamewindow.d[i].occupier)
         # canvas.update_idletasks
         # print(gamewindow.d[i].occupier)
@@ -244,8 +311,6 @@ def color_assign(current_piece):
     index = choicelist.index(current_piece)
     color = colorlist[index]
     return color
-    
-    return current_piece
             
 def piece_queue_handler(piece_queue):
     choicelist = ["piece_I", "piece_J", "piece_L", "piece_O", "piece_S", "piece_T", "piece_Z"] 
@@ -267,12 +332,12 @@ gamewindow.score = 0
 gamewindow.score_container = canvas.create_rectangle((450,120,570,150), fill="black", width = 0.5, outline = "white")
 gamewindow.score_text = canvas.create_text(510,105,text="SCORE", font=("Arial", 12))
 gamewindow.score_display = canvas.create_text(510,135,text=gamewindow.score, font=("Arial", 12),  fill = "white")
-                
+           
 # Windows - Game - Grid
 gamewindow.d = {}
 for r in range(1,21):
     for c in range(1,11):
-        gamewindow.d["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25))
+        gamewindow.d["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25), "black")
 
 # Windows - High Score
 highscore = class_window("highscore","green",0,0,600,600)
@@ -310,29 +375,43 @@ game_started = False
 game_paused = False
 piece_queue = []
 current_piece = False
-counter = 200
+force_exit = 0
+counter = 130
 
 bring_to_front(mainmenu)
 
 # Dictionary to declare the relative column and row for each block
 # declare everything on one row from left ro right before moving on to the next
+        # gamewindow.d["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25))
+        
+# pieces_d = { "piece_I" : [ gamewindow.d["sq_1_4"], gamewindow.d["sq_1_5"], gamewindow.d["sq_1_6"], gamewindow.d["sq_1_7"] ],
+             # "piece_J" : [ gamewindow.d["sq_1_4"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
+             # "piece_L" : [ gamewindow.d["sq_1_6"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
+             # "piece_O" : [ gamewindow.d["sq_1_5"], gamewindow.d["sq_1_6"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
+             # "piece_S" : [ gamewindow.d["sq_1_5"], gamewindow.d["sq_1_6"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"] ],
+             # "piece_T" : [ gamewindow.d["sq_1_5"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
+             # "piece_Z" : [ gamewindow.d["sq_1_4"], gamewindow.d["sq_1_5"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ]            
+             # }   # Old pieces_d from when I was trying to regenerate the grid every frame
 
-pieces_d = { "piece_I" : [ gamewindow.d["sq_1_4"], gamewindow.d["sq_1_5"], gamewindow.d["sq_1_6"], gamewindow.d["sq_1_7"] ],
-             "piece_J" : [ gamewindow.d["sq_1_4"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
-             "piece_L" : [ gamewindow.d["sq_1_6"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
-             "piece_O" : [ gamewindow.d["sq_1_5"], gamewindow.d["sq_1_6"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
-             "piece_S" : [ gamewindow.d["sq_1_5"], gamewindow.d["sq_1_6"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"] ],
-             "piece_T" : [ gamewindow.d["sq_1_5"], gamewindow.d["sq_2_4"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ],
-             "piece_Z" : [ gamewindow.d["sq_1_4"], gamewindow.d["sq_1_5"], gamewindow.d["sq_2_5"], gamewindow.d["sq_2_6"] ]            
-             }
-             
- 
+# Dicts              
+pieces_d = { 
+            "piece_I" : [  [1,4],  [1,5],  [1,6],  [1,7] ],
+            "piece_J" : [  [1,4],  [2,4],  [2,5],  [2,6] ],
+            "piece_L" : [  [1,6],  [2,4],  [2,5],  [2,6] ],
+            "piece_O" : [  [1,5],  [1,6],  [2,5],  [2,6] ],
+            "piece_S" : [  [1,5],  [1,6],  [2,4],  [2,5] ],
+            "piece_T" : [  [1,5],  [2,4],  [2,5],  [2,6] ],
+            "piece_Z" : [  [1,4],  [1,5],  [2,5],  [2,6] ]            
+            }
+
+
+current_stamper = {} 
 suppress_grid()
 canvas.tag_lower(escape_window.selector.shape)
 
 interface.bind("x", lambda x: debugprint())    ### DEBUG 
 interface.bind("d", lambda x: print("game_started:",game_started, "game_paused", game_paused))    ### DEBUG 
-interface.bind("f", lambda x: print(piece_queue))    ### DEBUG 
+interface.bind("f", lambda x: print(current_stamper[0].occupier))    ### DEBUG 
 
 interface.bind("<Return>", lambda x: key_guide(curr_window, "enter"))
 interface.bind("<Escape>", lambda x: key_guide(curr_window, "escape"))
@@ -343,5 +422,7 @@ interface.bind("<Up>", lambda x: key_guide(curr_window, "up"))
 interface.bind("<Down>", lambda x: key_guide(curr_window, "down"))
 
 # Game Loop
+g = threading.Thread(target=game_loop, args=()) # threading allows us to input while the loop is being ran. If I use just game_loop(), it won't wor
+g.start()
 
 interface.mainloop()
