@@ -5,7 +5,7 @@ import time
 import sys
 import os
 import threading
-
+import copy
 
 pieces_d = { 
             "piece_I" : [  [1,4],  [1,5],  [1,6],  [1,7] ],
@@ -17,7 +17,18 @@ pieces_d = {
             "piece_Z" : [  [1,4],  [1,5],  [2,5],  [2,6] ]            
             }
 
+rotation_matrix_3x3 = {
+                    "1x1" : 0 , "2x1" : 0, "3x1" : 0,
+                    "1x2" : 0 , "2x2" : 0, "3x2" : 0,
+                    "1x3" : 0 , "2x3" : 0, "3x3" : 0
+                    }
             
+rotation_matrix_4x4 = {
+                    "1x1" : 0 , "2x1" : 0, "3x1" : 0, "4x1" : 0,
+                    "1x2" : 0 , "2x2" : 0, "3x2" : 0, "4x2" : 0,
+                    "1x3" : 0 , "2x3" : 0, "3x3" : 0, "4x3" : 0,
+                    "1x4" : 0 , "2x4" : 0, "3x4" : 0, "4x4" : 0
+                    }
 class tetrisapp():
     def __init__(self):
         self.running = True
@@ -42,6 +53,14 @@ class tetrisapp():
             for i in new_win.grid_dict:
                 print(i)
                 game.canvas.tag_raise(new_win.grid_dict[i].shape)
+        if hasattr(new_win, "shapelist_1_5"):
+            for i in new_win.shapelist_1_5:
+                print("SHAPE FOUND")
+                game.canvas.tag_raise(i)
+        if hasattr(new_win, "shapelist_2"):
+            for i in new_win.shapelist_2:
+                print("SHAPE FOUND")
+                game.canvas.tag_raise(i)
         for i in new_win.buttonlist:
             if hasattr(i, "scope"):
                 self.current_win.selector = i
@@ -63,13 +82,13 @@ class tetrisapp():
             game.interface.bind("<Escape>", lambda x:  game.method_handler())
         if self.current_win == game.tetrisgame_win:
             self.game_started = True
-            start_message()
             self.can_pause = True
             game.interface.bind("<y>", lambda x: print(game.current_win))
-            game.interface.bind("<Down>", lambda x: print("down"))
-            game.interface.bind("<Up>", lambda x: print("up")) 
-            game.interface.bind("<Left>", lambda x: print("left"))       
-            game.interface.bind("<Right>", lambda x: print("right"))     
+            game.interface.bind("<q>", lambda x: game.current_win.current_stamper.rotate_clockwise())
+            game.interface.bind("<Down>", lambda x: game.current_win.current_stamper.move_ud(25))
+            game.interface.bind("<Up>", lambda x: print("rotation?")) 
+            game.interface.bind("<Left>", lambda x: game.current_win.current_stamper.move_lr(-25))       
+            game.interface.bind("<Right>", lambda x: game.current_win.current_stamper.move_lr(25))     
             game.interface.bind("<x>", lambda x: game.tetrisgame_win.stamper_queue.pop(1))       
             game.interface.bind("<d>", lambda x: print(game.tetrisgame_win.stamper_queue[2].squarelist))                
         if self.current_win == game.pause_win:
@@ -133,10 +152,12 @@ class class_window_game():
         self.shape = game.canvas.create_rectangle((x1,y1,x2,y2), fill=color, width = 0)
         self.name = name
         self.shapelist = [self.shape] # To be used when changing the z-index of all the elements of the window
+        self.shapelist_1_5 = [] # For shadow stamper shapes. I guess we can consider the numbers next to the list the z-index 
         self.shapelist_2 = [] # For stamped blocks only. Separate list so UI elements don't get accidentally deleted 
         self.buttonlist = []
         self.stamper_queue = []
         self.current_stamper = False
+        self.shadow_stamper = False
         self.selector = "null"
         
     def __str__(self):
@@ -159,15 +180,49 @@ class class_window_game():
         index = choicelist.index(piece)
         color = colorlist[index]
         slist = []
-        for i in range(0,4):
+        for i in range(0,4): # creating the object
             r = pieces_d[piece][i][0]
             c = pieces_d[piece][i][1]
             object = square(r,c,-55+(c*25),110+(r*25), color)
-            slist.append(object)           
+            slist.append(object)
+        for d in slist: # appending the squares to shapelist_2
+            print("THIS IS D.SHAPE", d.shape)
+            self.shapelist_2.append(d.shape)
         object = stamper(slist, piece)
         return object
-       
+        
+    def create_shadowstamper(self):
+        slist = []
+        for i in self.current_stamper.squarelist:
+            # squarecopy = copy.copy(i)
+            # slist.append(squarecopy)
+            shadowsquare = square(i.row, i.column, i.a, i.b, "white")
+            slist.append(shadowsquare)
+        for d in slist:
+            self.shapelist_1_5.append(d.shape) # problems might arise later, keep this one in mind
+        shadow_instance = stamper(slist, self.current_stamper.blocktype)
+        print("this is shadow instance", shadow_instance)
+        print("this is shadow instance squarelist", shadow_instance.squarelist)
+        self.shadow_stamper = stamper(slist, self.current_stamper.blocktype)
+            
+    
+        
+    # def stamp_maker_2(self):
+        # for d in self.stamper_queue:
+            # for i in d.squarelist:
+                # self.shapelist_2.append(i.shape)
+
+ # object = square(r,c,-55+(c*25),110+(r*25), color)
+
+     # game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25), "#bfb7b6") 
+     
     def queue_arranger(self):
+        for d in range(0,4):
+            object = self.stamper_queue[d]
+            delta_x = 0
+            for i in object.squarelist:
+                i.b = 120 + (i.row * 25)
+                game.canvas.moveto(i.shape, i.a , i.b)
         for d in range(0,4):
             object = self.stamper_queue[d]
             delta_x = 0
@@ -179,6 +234,8 @@ class class_window_game():
                 x.b = x.b + (d*85)
                 x.a = x.a + delta_x
                 game.canvas.moveto(x.shape, x.a, x.b)
+    
+    
                 
     
 
@@ -222,14 +279,36 @@ class stamper():
     def __init__(self, squarelist, blocktype):
         self.squarelist = squarelist # we're going to have square instances      
         self.blocktype = blocktype
-        
-    def move_down(self):
+    
+    def rotate_clockwise(self):
         for i in self.squarelist:
-            self.squarelist[i].y = self.squarelist[i].y + 25
+            i.a, i.b = (i.b - 25), (i.a +25) 
+            game.canvas.moveto(i.shape, i.a, i.b)
+            
+    def move_ud(self, delta_y):
+        for i in self.squarelist:
+            i.b = i.b + delta_y
+            game.canvas.moveto(i.shape, i.a, i.b)
+            game.canvas.tag_raise(i.shape)
     
     def move_lr(self, delta_x):
-        for i in self.squarelist:
-            self.squarelist[i].x = self.squarelist[i].x + delta_x
+        # for i in self.squarelist:
+            # if ( (i.a + delta_x) < 175 ) or ( (i.a + delta_x) > 400 ):
+                # return
+        shadowlist = game.tetrisgame_win.shadow_stamper.squarelist
+        for i in range(0,4):
+            if ( (self.squarelist[i].a + delta_x) < 175 ) or ( (self.squarelist[i].a + delta_x) > 400 ):
+                return
+        for i in range(0,4):
+            self.squarelist[i].a = self.squarelist[i].a + delta_x
+            game.canvas.moveto(self.squarelist[i].shape, self.squarelist[i].a, self.squarelist[i].b)
+            shadowlist[i].a = shadowlist[i].a + delta_x 
+            game.canvas.moveto(shadowlist[i].shape, shadowlist[i].a, shadowlist[i].b)
+            
+    # def move_lr(self, delta_x):  rotate prototype 
+        # for i in self.squarelist:
+            # i.a = i.a + delta_x
+            # game.canvas.moveto(i.shape, i.b, i.a) 
     
 def start_message():
         startrect = game.canvas.create_rectangle(200, 200, 400, 300, fill="orange", width=1, outline = "white")
@@ -238,6 +317,37 @@ def start_message():
 
 def delete_message(inv, txt):
     game.canvas.delete(inv, txt)
+
+def clear_shapelists():
+    for i in game.tetrisgame_win.shapelist_2:
+        game.canvas.delete(i)
+    for i in game.tetrisgame_win.shapelist_1_5:
+        game.canvas.delete(i)
+    game.tetrisgame_win.shapelist_2 = []
+    game.tetrisgame_win.shapelist_1_5= []
+
+# game.tetrisgame_win.grid_dict = {}
+# for r in range(1,21):
+    # for c in range(1,11):
+        # game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25), "#bfb7b6") 
+
+#        self.shape = game.canvas.create_rectangle(a,b,a+25,b+25, fill=self.occupier, width=w, outline = self.outl)     
+
+def reposition_stamper():
+    for i in game.tetrisgame_win.current_stamper.squarelist:
+        i.a = (i.column*25) + 150
+        i.b = (i.row*25) + 40
+        game.canvas.moveto(i.shape, i.a, i.b)
+    print("this is shadow stamper",game.tetrisgame_win.shadow_stamper)
+    print("this is shadow stamper.squarelist", game.tetrisgame_win.shadow_stamper.squarelist)
+    for i in game.tetrisgame_win.shadow_stamper.squarelist:
+        delta_y = 490
+        if game.tetrisgame_win.shadow_stamper.blocktype == "piece_I":
+            delta_y = 515
+        i.a = (i.column*25) + 150
+        i.b = (i.row*25) + delta_y
+        game.canvas.moveto(i.shape, i.a, i.b)
+     
     
 def game_loop():
     game.current_win.selector_mover(0)
@@ -247,24 +357,38 @@ def game_loop():
             if game.running == False:
                 return
             if game.current_win == game.mainmenu_win:
-                game.counter = 200
+                game.tetrisgame_win.current_stamper = False
+                game.tetrisgame_win.shadow_stamper = False 
+                game.tetrisgame_win.game_started = False
+                game.tetrisgame_win.stamper_queue = []
+                clear_shapelists()
+                game.counter = 20
             time.sleep(0.1)
             print(game.current_win,"not game", game.counter)
         while game.current_win == game.tetrisgame_win:
             if game.running == False:
                 return
+            if game.tetrisgame_win.game_started == False:
+                start_message()
+                game.tetrisgame_win.game_started = True
             while len(game.tetrisgame_win.stamper_queue) < 4:
                 instance = game.tetrisgame_win.stamp_maker()
                 game.tetrisgame_win.stamper_queue.append(instance)
                 print(game.tetrisgame_win.stamper_queue)
                 if len(game.tetrisgame_win.stamper_queue) == 4:
                     game.tetrisgame_win.queue_arranger()
+            if game.tetrisgame_win.current_stamper == False:
+                game.tetrisgame_win.current_stamper = game.tetrisgame_win.stamper_queue[0]
+                game.tetrisgame_win.create_shadowstamper()
+                reposition_stamper()
+                game.tetrisgame_win.stamper_queue.pop(0)
             instance = False
             game.counter += -1
             time.sleep(0.1)
             print(game.current_win, game.counter)
             if game.counter == 0:
-                game.counter = 200
+                game.counter = 20
+                game.tetrisgame_win.current_stamper.move_ud(25)
 
 
 # Windows                
