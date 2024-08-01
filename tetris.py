@@ -18,16 +18,17 @@ pieces_d = {
             }
 
 rotation_matrix_3x3 = {
-                    "1x1" : 0 , "2x1" : 0, "3x1" : 0,
-                    "1x2" : 0 , "2x2" : 0, "3x2" : 0,
-                    "1x3" : 0 , "2x3" : 0, "3x3" : 0
+                    "1x1" : [] , "2x1" : [], "3x1" : [],
+                    "1x2" : [] , "2x2" : [], "3x2" : [],
+                    "1x3" : [] , "2x3" : [], "3x3" : []
                     }
-            
+
+
 rotation_matrix_4x4 = {
-                    "1x1" : 0 , "2x1" : 0, "3x1" : 0, "4x1" : 0,
-                    "1x2" : 0 , "2x2" : 0, "3x2" : 0, "4x2" : 0,
-                    "1x3" : 0 , "2x3" : 0, "3x3" : 0, "4x3" : 0,
-                    "1x4" : 0 , "2x4" : 0, "3x4" : 0, "4x4" : 0
+                    "1x1" : [] , "2x1" : [], "3x1" : [], "4x1" : [],
+                    "1x2" : [] , "2x2" : [], "3x2" : [], "4x2" : [],
+                    "1x3" : [] , "2x3" : [], "3x3" : [], "4x3" : [],
+                    "1x4" : [] , "2x4" : [], "3x4" : [], "4x4" : []
                     }
 class tetrisapp():
     def __init__(self):
@@ -84,9 +85,10 @@ class tetrisapp():
             self.game_started = True
             self.can_pause = True
             game.interface.bind("<y>", lambda x: print(game.current_win))
-            game.interface.bind("<q>", lambda x: game.current_win.current_stamper.rotate_clockwise())
+            game.interface.bind("<q>", lambda x: game.current_win.current_stamper.rotate("clockwise"))
+            game.interface.bind("<w>", lambda x: game.current_win.current_stamper.rotate("counterclockwise"))
             game.interface.bind("<Down>", lambda x: game.current_win.current_stamper.move_ud(25))
-            game.interface.bind("<Up>", lambda x: print("rotation?")) 
+            game.interface.bind("<Up>", lambda x: print(game.current_win.current_matrix)) 
             game.interface.bind("<Left>", lambda x: game.current_win.current_stamper.move_lr(-25))       
             game.interface.bind("<Right>", lambda x: game.current_win.current_stamper.move_lr(25))     
             game.interface.bind("<x>", lambda x: game.tetrisgame_win.stamper_queue.pop(1))       
@@ -156,6 +158,7 @@ class class_window_game():
         self.shapelist_2 = [] # For stamped blocks only. Separate list so UI elements don't get accidentally deleted 
         self.buttonlist = []
         self.stamper_queue = []
+        self.current_matrix = []
         self.current_stamper = False
         self.shadow_stamper = False
         self.selector = "null"
@@ -172,7 +175,53 @@ class class_window_game():
                         game.canvas.moveto(i.shape, d.x-4, d.y-4)
                         i.scope = d.role
                         return
-    
+       
+    def put_on_matrix(self):
+            for i in rotation_matrix_3x3:
+                rotation_matrix_3x3[i] = [] # problem in the future? might wanna deepcopy 
+            for i in rotation_matrix_4x4:
+                rotation_matrix_4x4[i] = []
+            currstamper = self.current_stamper
+            shadowstamper = self.shadow_stamper
+            if currstamper.blocktype == "piece_I":
+                self.current_matrix = rotation_matrix_4x4
+                self.current_matrix["1x2"] = [currstamper.squarelist[0], shadowstamper.squarelist[0] ]
+                self.current_matrix["2x2"] = [currstamper.squarelist[1], shadowstamper.squarelist[1] ]
+                self.current_matrix["3x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
+                self.current_matrix["4x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
+            if currstamper.blocktype == "piece_J":
+                self.current_matrix = rotation_matrix_3x3
+                self.current_matrix["1x1"] = [currstamper.squarelist[0], shadowstamper.squarelist[0] ]
+                self.current_matrix["1x2"] = [currstamper.squarelist[1], shadowstamper.squarelist[1] ]
+                self.current_matrix["2x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
+                self.current_matrix["3x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
+            if currstamper.blocktype == "piece_L":
+                self.current_matrix = rotation_matrix_3x3
+                self.current_matrix["3x1"] = [currstamper.squarelist[0], shadowstamper.squarelist[0] ]
+                self.current_matrix["1x2"] = [currstamper.squarelist[1], shadowstamper.squarelist[1] ]
+                self.current_matrix["2x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
+                self.current_matrix["3x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
+            if currstamper.blocktype == "piece_O":
+                return
+            if currstamper.blocktype == "piece_S":
+                self.current_matrix = rotation_matrix_3x3
+                self.current_matrix["2x1"] = [currstamper.squarelist[0], shadowstamper.squarelist[0] ]
+                self.current_matrix["3x1"] = [currstamper.squarelist[1], shadowstamper.squarelist[1] ]
+                self.current_matrix["1x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
+                self.current_matrix["2x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
+            if currstamper.blocktype == "piece_T":
+                self.current_matrix = rotation_matrix_3x3
+                self.current_matrix["2x1"] = [currstamper.squarelist[0], shadowstamper.squarelist[0] ]
+                self.current_matrix["1x2"] = [currstamper.squarelist[1], shadowstamper.squarelist[1] ]
+                self.current_matrix["2x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
+                self.current_matrix["3x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
+            if currstamper.blocktype == "piece_Z":
+                self.current_matrix = rotation_matrix_3x3
+                self.current_matrix["1x1"] = [currstamper.squarelist[0], shadowstamper.squarelist[0] ]
+                self.current_matrix["2x1"] = [currstamper.squarelist[1], shadowstamper.squarelist[1] ]
+                self.current_matrix["2x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
+                self.current_matrix["3x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
+                                                      
     def stamp_maker(self):
         colorlist = ["cyan", "blue", "orange", "yellow", "green", "#bc8ad0", "red"]
         choicelist = ["piece_I", "piece_J", "piece_L", "piece_O", "piece_S", "piece_T", "piece_Z"]
@@ -279,12 +328,89 @@ class stamper():
     def __init__(self, squarelist, blocktype):
         self.squarelist = squarelist # we're going to have square instances      
         self.blocktype = blocktype
-    
-    def rotate_clockwise(self):
-        for i in self.squarelist:
-            i.a, i.b = (i.b - 25), (i.a +25) 
-            game.canvas.moveto(i.shape, i.a, i.b)
-            
+
+    def rotate(self,direction): # a=x b=y
+        matrix = game.tetrisgame_win.current_matrix
+        if self.blocktype == "piece_O":
+            return 
+        elif self.blocktype == "piece_I":
+            self.rotate2(direction)
+            return
+        # if self.blocktype != "piece_I":
+        else:
+            if direction == "counterclockwise":
+                rotation1 = [ matrix["1x1"], matrix["1x3"], matrix["3x3"], matrix["3x1"] ]
+                rotation2 = [ matrix["1x2"], matrix["2x3"], matrix["3x2"], matrix["2x1"] ]
+                values1 = [ [0, 50] , [50, 0] , [0, -50] , [-50, 0] ]
+                values2 = [ [25, 25] , [25, -25] , [-25, -25] , [-25, 25] ]
+            if direction == "clockwise":
+                rotation1 = [ matrix["1x1"], matrix["3x1"], matrix["3x3"], matrix["1x3"] ]
+                rotation2 = [ matrix["1x2"], matrix["2x1"], matrix["3x2"], matrix["2x3"] ]
+                values1 = [ [50, 0] , [0, 50] , [-50, 0] , [0, -50] ]
+                values2 = [ [25, -25] , [25, 25] , [-25, 25] , [-25, -25] ]
+            print("THIS IS ROTATION1", rotation1)
+            print("THIS IS ROTATION1[0]", rotation1[0], "THIS IS THE LEN OF ROTATION1[0]", len(rotation1[0]))
+            for i in range(0,2): # each matrix element holds a list with 2 squares, that of the current_stamper and the shadow_stamper
+                for d in range(0,4):
+                    if len(rotation1[d]) != 0:
+                        print("rotation1[d]", rotation1[d])
+                        print("rotation1[d][i]", rotation1[d][i])
+                        rotation1[d][i].a += values1[d][0]
+                        rotation1[d][i].b += values1[d][1]
+                    if len(rotation2[d]) != 0:
+                        rotation2[d][i].a += values2[d][0]
+                        rotation2[d][i].b += values2[d][1]
+            for i in game.tetrisgame_win.current_stamper.squarelist:
+                game.canvas.moveto(i.shape, i.a, i.b)
+            for i in game.tetrisgame_win.shadow_stamper.squarelist:
+                game.canvas.moveto(i.shape, i.a, i.b)
+            if direction == "counterclockwise":
+                matrix["1x1"], matrix["3x1"], matrix["3x3"], matrix["1x3"] = matrix["3x1"], matrix["3x3"], matrix["1x3"], matrix["1x1"]
+                matrix["1x2"], matrix["2x1"], matrix["3x2"], matrix["2x3"] = matrix["2x1"], matrix["3x2"], matrix["2x3"], matrix["1x2"]
+            if direction == "clockwise":
+                matrix["1x1"], matrix["3x1"], matrix["3x3"], matrix["1x3"] = matrix["1x3"], matrix["1x1"], matrix["3x1"], matrix["3x3"]
+                matrix["1x2"], matrix["2x1"], matrix["3x2"], matrix["2x3"] = matrix["2x3"], matrix["1x2"], matrix["2x1"], matrix["3x2"]
+
+    def rotate2(self, direction):
+            matrix = game.tetrisgame_win.current_matrix
+            if direction == "clockwise":
+                rotation1 = [ matrix["1x3"], matrix["2x1"], matrix["4x2"], matrix["3x4"] ]
+                rotation2 = [ matrix["1x2"], matrix["3x1"], matrix["4x3"], matrix["2x4"] ]
+                rotation3 = [ matrix["2x2"], matrix["3x2"], matrix["3x3"], matrix["2x3"] ]
+                values1 = [ [25,-50] , [50,25] , [-25,50] , [-50,-25] ]
+                values2 = [ [50,-25] , [25,50] , [-50,25] , [-25,-50] ]
+                values3 = [ [25,0] , [0,25] , [-25,0] , [0,-25] ]           
+            if direction == "counterclockwise":
+                rotation1 = [ matrix["1x3"], matrix["2x1"], matrix["4x2"], matrix["3x4"] ]
+                rotation2 = [ matrix["1x2"], matrix["3x1"], matrix["4x3"], matrix["2x4"] ]
+                rotation3 = [ matrix["2x2"], matrix["3x2"], matrix["3x3"], matrix["2x3"] ]
+                values1 = [ [50,25] , [-25,50] , [-50,-25] , [25,-50] ]
+                values2 = [ [25,50] , [-50,25] , [-25,-50] , [50,-25] ]
+                values3 = [ [0,25] , [-25,0] , [0,-25] , [25,0] ]
+                
+            for i in range(0,2): # each matrix element holds a list with 2 squares, that of the current_stamper and the shadow_stamper
+                for d in range(0,4):
+                    if len(rotation1[d]) != 0:
+                        rotation1[d][i].a += values1[d][0]
+                        rotation1[d][i].b += values1[d][1]
+                    if len(rotation2[d]) != 0:
+                        rotation2[d][i].a += values2[d][0]
+                        rotation2[d][i].b += values2[d][1]
+                    if len(rotation3[d]) != 0:
+                        rotation3[d][i].a += values3[d][0]
+                        rotation3[d][i].b += values3[d][1]
+            for i in game.tetrisgame_win.current_stamper.squarelist:
+                game.canvas.moveto(i.shape, i.a, i.b)
+            for i in game.tetrisgame_win.shadow_stamper.squarelist:
+                game.canvas.moveto(i.shape, i.a, i.b)
+            if direction == "clockwise":             
+                matrix["1x2"], matrix["3x1"], matrix["4x3"], matrix["2x4"] = matrix["2x4"], matrix["1x2"], matrix["3x1"], matrix["4x3"] 
+                matrix["1x3"], matrix["2x1"], matrix["4x2"], matrix["3x4"] = matrix["3x4"], matrix["1x3"], matrix["2x1"], matrix["4x2"]
+                matrix["2x2"], matrix["3x2"], matrix["3x3"], matrix["2x3"] = matrix["2x3"], matrix["2x2"], matrix["3x2"], matrix["3x3"]
+            if direction == "counterclockwise":              
+                matrix["1x2"], matrix["3x1"], matrix["4x3"], matrix["2x4"] = matrix["3x1"], matrix["4x3"], matrix["2x4"], matrix["1x2"]
+                matrix["1x3"], matrix["2x1"], matrix["4x2"], matrix["3x4"] = matrix["2x1"], matrix["4x2"], matrix["3x4"], matrix["1x3"]
+                matrix["2x2"], matrix["3x2"], matrix["3x3"], matrix["2x3"] = matrix["3x2"], matrix["3x3"], matrix["2x3"], matrix["2x2"]               
     def move_ud(self, delta_y):
         for i in self.squarelist:
             i.b = i.b + delta_y
@@ -362,7 +488,7 @@ def game_loop():
                 game.tetrisgame_win.game_started = False
                 game.tetrisgame_win.stamper_queue = []
                 clear_shapelists()
-                game.counter = 20
+                game.counter = 300
             time.sleep(0.1)
             print(game.current_win,"not game", game.counter)
         while game.current_win == game.tetrisgame_win:
@@ -381,13 +507,14 @@ def game_loop():
                 game.tetrisgame_win.current_stamper = game.tetrisgame_win.stamper_queue[0]
                 game.tetrisgame_win.create_shadowstamper()
                 reposition_stamper()
+                game.tetrisgame_win.put_on_matrix()
                 game.tetrisgame_win.stamper_queue.pop(0)
             instance = False
             game.counter += -1
             time.sleep(0.1)
             print(game.current_win, game.counter)
             if game.counter == 0:
-                game.counter = 20
+                game.counter = 300
                 game.tetrisgame_win.current_stamper.move_ud(25)
 
 
