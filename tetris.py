@@ -159,7 +159,7 @@ class class_window_game():
         self.grid_dict = {}
         self.shapelist = [self.shape] # To be used when changing the z-index of all the elements of the window
         self.shapelist_1_5 = [] # For shadow stamper shapes. I guess we can consider the numbers next to the list the z-index 
-        self.shapelist_2 = [] # For stamped blocks only. Separate list so UI elements don't get accidentally deleted 
+        self.shapelist_2 = [] # For stampers only. Separate list so UI elements don't get accidentally deleted 
         self.buttonlist = []
         self.stamper_queue = []
         self.current_matrix = []
@@ -236,19 +236,54 @@ class class_window_game():
                 self.current_matrix["2x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
                 self.current_matrix["3x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
 
-    def linechecker(self):    
+    def linechecker(self):
         for r in range(20,0,-1):
             current_line_square = []
             current_line_color = []
-            proceed = 1
+            found = 0
             for c in range(10,0,-1):
                 current_line_color.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].occupier )
                 current_line_square.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] )
             if "#bfb7b6" not in current_line_color:
+                found = 1
+                print(current_line_square)
+                print(current_line_color)
                 for i in current_line_square:
                     i.occupier = "#bfb7b6"
-                    
-                
+                    game.canvas.delete(i.shape)
+                    i.shape = game.canvas.create_rectangle(i.a, i.b, i.a+25, i.b+25, fill = "#bfb7b6", width=0.25, outline="white")
+                for i in range((r),0,-1): # might wanna change r ?
+                    for d in range(10,0,-1):
+                        # if r+1 == 21:
+                            # continue
+                        if i-1 == 0:
+                            return
+                        print("SKRRRRRRRRR")
+                        square = game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(i,d)]
+                        abovesquare = game.tetrisgame_win.grid_dict["sq_{0}_{1}".format( (i-1) ,d)]
+                        # square, abovesquare = abovesquare, square
+                        abovesquare.occupier, square.occupier = square.occupier, abovesquare.occupier
+                        # game.canvas.moveto(square.shape, square.a, square.b)
+                        # game.canvas.tag_raise(square.shape)
+                    for i in self.grid_dict:
+                        grid = self.grid_dict[i]
+                        game.canvas.delete(grid.shape) # memory leak?
+                        ol = "white"
+                        if grid.occupier != "#bfb7b6":
+                            ol = "black"
+                        grid.shape = game.canvas.create_rectangle(grid.a, grid.b, grid.a+25, grid.b+25, fill = grid.occupier, width=0.25, outline=ol)
+                        game.canvas.tag_raise(grid.shape)
+                    for i in self.grid_dict:
+                        grid = self.grid_dict[i]
+                        if grid.occupier != "#bfb7b6":
+                            game.canvas.tag_raise(grid.shape)
+                return
+            # if found == 1:
+                # for i in range(500):
+                    # print("AAAAAAAAAAA")
+                # self.linechecker()
+                # return
+            # return
     def stamp_maker(self):
         colorlist = ["cyan", "blue", "orange", "yellow", "green", "#bc8ad0", "red"]
         choicelist = ["piece_I", "piece_J", "piece_L", "piece_O", "piece_S", "piece_T", "piece_Z"]
@@ -472,6 +507,9 @@ class stamper():
         for i in self.squarelist:
             i.b = i.b + delta_y
             game.canvas.moveto(i.shape, i.a, i.b)
+            game.canvas.tag_raise(i.shape)
+        game.tetrisgame_win.linechecker()
+        for i in game.tetrisgame_win.current_stamper.squarelist:
             game.canvas.tag_raise(i.shape)
     
     def move_lr(self, delta_x):
