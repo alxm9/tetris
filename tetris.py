@@ -48,6 +48,15 @@ class tetrisapp():
             game.previous_win = game.mainmenu_win
         self.previous_win = previous_win
         self.current_win = new_win
+        if self.current_win == game.mainmenu_win:
+            self.game_started = False
+            game.tetrisgame_win.stamper_queue = []
+            game.interface.bind("<y>", lambda x: print(game.current_win))
+            game.interface.bind("<Down>", lambda x: game.current_win.selector_mover(75))      
+            game.interface.bind("<Up>", lambda x: game.current_win.selector_mover(-75))  
+            game.interface.bind("<Return>", lambda x: game.current_win.selector.scope()) 
+            game.interface.bind("<Escape>", lambda x:  game.method_handler())
+            game.tetrisgame_win.grid_cleaner()
         for i in new_win.shapelist:
             game.canvas.tag_raise(i)
         if hasattr(new_win, "grid_dict"):
@@ -65,14 +74,6 @@ class tetrisapp():
         for i in new_win.buttonlist:
             if hasattr(i, "scope"):
                 self.current_win.selector = i
-        if self.current_win == game.mainmenu_win:
-            self.game_started = False
-            game.tetrisgame_win.stamper_queue = []
-            game.interface.bind("<y>", lambda x: print(game.current_win))
-            game.interface.bind("<Down>", lambda x: game.current_win.selector_mover(75))      
-            game.interface.bind("<Up>", lambda x: game.current_win.selector_mover(-75))  
-            game.interface.bind("<Return>", lambda x: game.current_win.selector.scope()) 
-            game.interface.bind("<Escape>", lambda x:  game.method_handler())
         if self.current_win == game.highscore_win:
             self.game_started = False
             game.interface.bind("<y>", lambda x: print(game.current_win))
@@ -91,6 +92,7 @@ class tetrisapp():
             game.interface.bind("<Up>", lambda x: print(game.current_win.current_matrix)) 
             game.interface.bind("<Left>", lambda x: game.current_win.current_stamper.move_lr(-25))       
             game.interface.bind("<Right>", lambda x: game.current_win.current_stamper.move_lr(25))     
+            game.interface.bind("<space>", lambda x: game.current_win.current_stamper.move_space())  
             game.interface.bind("<x>", lambda x: game.tetrisgame_win.stamper_queue.pop(1))       
             game.interface.bind("<d>", lambda x: print(game.tetrisgame_win.stamper_queue[2].squarelist))                
         if self.current_win == game.pause_win:
@@ -101,7 +103,7 @@ class tetrisapp():
             game.interface.bind("<Escape>", lambda x:  game.method_handler())            
             self.can_pause = False
         print(game.current_win)
-
+                
     def rungame(self):
         self.g = threading.Thread(target=game_loop) # threading allows us to input while the loop is being ran. If I use just game_loop(), it won't wor
         self.g.start()
@@ -153,6 +155,8 @@ class class_window_game():
     def __init__(self,name,color,x1,y1,x2,y2):
         self.shape = game.canvas.create_rectangle((x1,y1,x2,y2), fill=color, width = 0)
         self.name = name
+        self.shadowplaced = 0
+        self.grid_dict = {}
         self.shapelist = [self.shape] # To be used when changing the z-index of all the elements of the window
         self.shapelist_1_5 = [] # For shadow stamper shapes. I guess we can consider the numbers next to the list the z-index 
         self.shapelist_2 = [] # For stamped blocks only. Separate list so UI elements don't get accidentally deleted 
@@ -165,7 +169,17 @@ class class_window_game():
         
     def __str__(self):
         return f"{self.name}"
-        
+
+    def grid_cleaner(self):
+        print("RUNNINGGGGGGG")
+        grid = self.grid_dict
+        for i in grid:
+            if grid[i].occupier != "#bfb7b6":
+                grid[i].occupier = "#bfb7b6"
+                game.canvas.delete(grid[i].shape)
+                grid[i].shape = 0
+                grid[i].shape = game.canvas.create_rectangle(grid[i].a, grid[i].b, grid[i].a+25, grid[i].b+25, fill=grid[i].occupier, width=0.25, outline="white")
+                
     def selector_mover(self, delta_y):
         for i in self.buttonlist:
             if hasattr(i, "scope"):
@@ -221,7 +235,20 @@ class class_window_game():
                 self.current_matrix["2x1"] = [currstamper.squarelist[1], shadowstamper.squarelist[1] ]
                 self.current_matrix["2x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
                 self.current_matrix["3x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
-                                                      
+
+    def linechecker(self):    
+        for r in range(20,0,-1):
+            current_line_square = []
+            current_line_color = []
+            proceed = 1
+            for c in range(10,0,-1):
+                current_line_color.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].occupier )
+                current_line_square.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] )
+            if "#bfb7b6" not in current_line_color:
+                for i in current_line_square:
+                    i.occupier = "#bfb7b6"
+                    
+                
     def stamp_maker(self):
         colorlist = ["cyan", "blue", "orange", "yellow", "green", "#bc8ad0", "red"]
         choicelist = ["piece_I", "piece_J", "piece_L", "piece_O", "piece_S", "piece_T", "piece_Z"]
@@ -239,7 +266,20 @@ class class_window_game():
             self.shapelist_2.append(d.shape)
         object = stamper(slist, piece)
         return object
-        
+
+    def print_piece(self):
+        counter = 0
+        grid = game.tetrisgame_win.grid_dict
+        while counter < 4: # so it doesn't waste extra miliseconds processing pointlessly
+            for i in self.current_stamper.squarelist:
+                for d in grid:
+                    if (i.a == grid[d].a) and (i.b == grid[d].b):
+                        grid[d].occupier = i.occupier
+                        game.canvas.delete(grid[d].shape)
+                        grid[d].shape = 0
+                        grid[d].shape = game.canvas.create_rectangle(grid[d].a, grid[d].b, grid[d].a+25, grid[d].b+25, fill=grid[d].occupier, width=0.25, outline="black")
+                        counter += 1
+
     def create_shadowstamper(self):
         slist = []
         for i in self.current_stamper.squarelist:
@@ -254,17 +294,6 @@ class class_window_game():
         print("this is shadow instance squarelist", shadow_instance.squarelist)
         self.shadow_stamper = stamper(slist, self.current_stamper.blocktype)
             
-    
-        
-    # def stamp_maker_2(self):
-        # for d in self.stamper_queue:
-            # for i in d.squarelist:
-                # self.shapelist_2.append(i.shape)
-
- # object = square(r,c,-55+(c*25),110+(r*25), color)
-
-     # game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25), "#bfb7b6") 
-     
     def queue_arranger(self):
         for d in range(0,4):
             object = self.stamper_queue[d]
@@ -276,17 +305,14 @@ class class_window_game():
             object = self.stamper_queue[d]
             delta_x = 0
             if object.blocktype  == "piece_I":
-                delta_x = - 8
+                delta_x = - 4
             if object.blocktype  == "piece_O":
                 delta_x = - 10
             for x in object.squarelist:
                 x.b = x.b + (d*85)
                 x.a = x.a + delta_x
                 game.canvas.moveto(x.shape, x.a, x.b)
-    
-    
-                
-    
+   
 
 class button():
     def __init__(self,x,y,name, tied_window):
@@ -370,6 +396,10 @@ class stamper():
             if direction == "clockwise":
                 matrix["1x1"], matrix["3x1"], matrix["3x3"], matrix["1x3"] = matrix["1x3"], matrix["1x1"], matrix["3x1"], matrix["3x3"]
                 matrix["1x2"], matrix["2x1"], matrix["3x2"], matrix["2x3"] = matrix["2x3"], matrix["1x2"], matrix["2x1"], matrix["3x2"]
+            for i in range(0,4):
+                if game.tetrisgame_win.current_stamper.squarelist[i].a < 175 or game.tetrisgame_win.current_stamper.squarelist[i].a > 400:
+                    self.rotate(direction)
+            shadow_handler(game.tetrisgame_win.shadow_stamper)
 
     def rotate2(self, direction):
             matrix = game.tetrisgame_win.current_matrix
@@ -407,34 +437,60 @@ class stamper():
                 matrix["1x2"], matrix["3x1"], matrix["4x3"], matrix["2x4"] = matrix["2x4"], matrix["1x2"], matrix["3x1"], matrix["4x3"] 
                 matrix["1x3"], matrix["2x1"], matrix["4x2"], matrix["3x4"] = matrix["3x4"], matrix["1x3"], matrix["2x1"], matrix["4x2"]
                 matrix["2x2"], matrix["3x2"], matrix["3x3"], matrix["2x3"] = matrix["2x3"], matrix["2x2"], matrix["3x2"], matrix["3x3"]
-            if direction == "counterclockwise":              
+            if direction == "counterclockwise":                             
                 matrix["1x2"], matrix["3x1"], matrix["4x3"], matrix["2x4"] = matrix["3x1"], matrix["4x3"], matrix["2x4"], matrix["1x2"]
                 matrix["1x3"], matrix["2x1"], matrix["4x2"], matrix["3x4"] = matrix["2x1"], matrix["4x2"], matrix["3x4"], matrix["1x3"]
-                matrix["2x2"], matrix["3x2"], matrix["3x3"], matrix["2x3"] = matrix["3x2"], matrix["3x3"], matrix["2x3"], matrix["2x2"]               
+                matrix["2x2"], matrix["3x2"], matrix["3x3"], matrix["2x3"] = matrix["3x2"], matrix["3x3"], matrix["2x3"], matrix["2x2"]
+            for i in range(0,4):
+                if game.tetrisgame_win.current_stamper.squarelist[i].a < 175 or game.tetrisgame_win.current_stamper.squarelist[i].a > 400:
+                    self.rotate(direction)
+            shadow_handler(game.tetrisgame_win.shadow_stamper)
+
+    def move_space(self):
+        for i in range(0,4):
+            game.tetrisgame_win.current_stamper.squarelist[i].a = game.tetrisgame_win.shadow_stamper.squarelist[i].a
+            game.tetrisgame_win.current_stamper.squarelist[i].b = game.tetrisgame_win.shadow_stamper.squarelist[i].b
+            game.canvas.moveto(game.tetrisgame_win.current_stamper.squarelist[i].shape, game.tetrisgame_win.current_stamper.squarelist[i].a, game.tetrisgame_win.current_stamper.squarelist[i].b)
+            game.canvas.tag_raise(game.tetrisgame_win.current_stamper.squarelist[i].shape)
+        game.current_win.current_stamper.move_ud(25)
+        
     def move_ud(self, delta_y):
+        if game.tetrisgame_win.shadowplaced == 0:
+            return
+        if game.tetrisgame_win.current_stamper.squarelist[0].b == game.tetrisgame_win.shadow_stamper.squarelist[0].b: # Leak?
+            game.tetrisgame_win.print_piece()
+            for i in game.tetrisgame_win.current_stamper.squarelist:
+                game.canvas.delete(i.shape)
+                del i
+            for i in game.tetrisgame_win.shadow_stamper.squarelist:
+                game.canvas.delete(i.shape)
+                del i
+            del game.tetrisgame_win.current_stamper
+            del game.tetrisgame_win.shadow_stamper
+            game.tetrisgame_win.current_stamper = False
+            game.tetrisgame_win.shadow_stamper = False
         for i in self.squarelist:
             i.b = i.b + delta_y
             game.canvas.moveto(i.shape, i.a, i.b)
             game.canvas.tag_raise(i.shape)
     
     def move_lr(self, delta_x):
-        # for i in self.squarelist:
-            # if ( (i.a + delta_x) < 175 ) or ( (i.a + delta_x) > 400 ):
-                # return
+        if game.tetrisgame_win.shadowplaced == 0:
+            return
         shadowlist = game.tetrisgame_win.shadow_stamper.squarelist
         for i in range(0,4):
             if ( (self.squarelist[i].a + delta_x) < 175 ) or ( (self.squarelist[i].a + delta_x) > 400 ):
                 return
+        for i in game.tetrisgame_win.current_stamper.squarelist:
+            for d in game.tetrisgame_win.grid_dict:
+                if ( i.b == game.tetrisgame_win.grid_dict[d].b ) and ( (i.a + delta_x) == game.tetrisgame_win.grid_dict[d].a ) and ( game.tetrisgame_win.grid_dict[d].occupier != "#bfb7b6" ):
+                    return
         for i in range(0,4):
             self.squarelist[i].a = self.squarelist[i].a + delta_x
             game.canvas.moveto(self.squarelist[i].shape, self.squarelist[i].a, self.squarelist[i].b)
             shadowlist[i].a = shadowlist[i].a + delta_x 
             game.canvas.moveto(shadowlist[i].shape, shadowlist[i].a, shadowlist[i].b)
-            
-    # def move_lr(self, delta_x):  rotate prototype 
-        # for i in self.squarelist:
-            # i.a = i.a + delta_x
-            # game.canvas.moveto(i.shape, i.b, i.a) 
+        shadow_handler(game.tetrisgame_win.shadow_stamper)
     
 def start_message():
         startrect = game.canvas.create_rectangle(200, 200, 400, 300, fill="orange", width=1, outline = "white")
@@ -452,28 +508,62 @@ def clear_shapelists():
     game.tetrisgame_win.shapelist_2 = []
     game.tetrisgame_win.shapelist_1_5= []
 
-# game.tetrisgame_win.grid_dict = {}
-# for r in range(1,21):
-    # for c in range(1,11):
-        # game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25), "#bfb7b6") 
-
-#        self.shape = game.canvas.create_rectangle(a,b,a+25,b+25, fill=self.occupier, width=w, outline = self.outl)     
-
 def reposition_stamper():
     for i in game.tetrisgame_win.current_stamper.squarelist:
         i.a = (i.column*25) + 150
         i.b = (i.row*25) + 40
         game.canvas.moveto(i.shape, i.a, i.b)
-    print("this is shadow stamper",game.tetrisgame_win.shadow_stamper)
-    print("this is shadow stamper.squarelist", game.tetrisgame_win.shadow_stamper.squarelist)
-    for i in game.tetrisgame_win.shadow_stamper.squarelist:
-        delta_y = 490
-        if game.tetrisgame_win.shadow_stamper.blocktype == "piece_I":
-            delta_y = 515
-        i.a = (i.column*25) + 150
-        i.b = (i.row*25) + delta_y
-        game.canvas.moveto(i.shape, i.a, i.b)
-     
+    stop = 0
+    shadow_handler(game.tetrisgame_win.shadow_stamper)
+
+            
+def shadow_handler(shadowstamper):
+    game.tetrisgame_win.shadowplaced = 0
+    for i in range(0,4):
+        game.tetrisgame_win.shadow_stamper.squarelist[i].a = game.tetrisgame_win.current_stamper.squarelist[i].a
+        game.tetrisgame_win.shadow_stamper.squarelist[i].b = game.tetrisgame_win.current_stamper.squarelist[i].b
+        for d in range(0,4):
+            game.canvas.moveto(game.tetrisgame_win.shadow_stamper.squarelist[d].shape, game.tetrisgame_win.shadow_stamper.squarelist[d].a, game.tetrisgame_win.shadow_stamper.squarelist[d].b)
+    grid = game.tetrisgame_win.grid_dict
+    clear = 1
+    previous_coords1 = ["na","na"] # a b
+    previous_coords2 = ["na","na"] # a b
+    previous_coords3 = ["na","na"] # a b
+    previous_coords4 = ["na","na"] # a b
+    previous_coords1[0], previous_coords1[1] = shadowstamper.squarelist[0].a, shadowstamper.squarelist[0].b
+    previous_coords2[0], previous_coords2[1] = shadowstamper.squarelist[1].a, shadowstamper.squarelist[1].b
+    previous_coords3[0], previous_coords3[1] = shadowstamper.squarelist[2].a, shadowstamper.squarelist[2].b
+    previous_coords4[0], previous_coords4[1] = shadowstamper.squarelist[3].a, shadowstamper.squarelist[3].b
+    while clear == 1:
+        for i in shadowstamper.squarelist:
+            i.b += 25
+            game.canvas.moveto(i.shape, i.a, i.b)
+        for i in shadowstamper.squarelist:
+            for d in grid:
+                if i.b == 565:
+                    shadowstamper.squarelist[0].a, shadowstamper.squarelist[0].b = previous_coords1[0], previous_coords1[1]
+                    shadowstamper.squarelist[1].a, shadowstamper.squarelist[1].b = previous_coords2[0], previous_coords2[1]
+                    shadowstamper.squarelist[2].a, shadowstamper.squarelist[2].b = previous_coords3[0], previous_coords3[1]
+                    shadowstamper.squarelist[3].a, shadowstamper.squarelist[3].b = previous_coords4[0], previous_coords4[1]
+                    for p in shadowstamper.squarelist:
+                        game.canvas.moveto(p.shape, p.a, p.b)
+                    game.tetrisgame_win.shadowplaced = 1
+                    return                    
+                if ( grid[d].occupier != "#bfb7b6" ):
+                    if ( (grid[d].b == i.b) and (grid[d].a == i.a) ):
+                        shadowstamper.squarelist[0].a, shadowstamper.squarelist[0].b = previous_coords1[0], previous_coords1[1]
+                        shadowstamper.squarelist[1].a, shadowstamper.squarelist[1].b = previous_coords2[0], previous_coords2[1]
+                        shadowstamper.squarelist[2].a, shadowstamper.squarelist[2].b = previous_coords3[0], previous_coords3[1]
+                        shadowstamper.squarelist[3].a, shadowstamper.squarelist[3].b = previous_coords4[0], previous_coords4[1]
+                        for p in shadowstamper.squarelist:
+                            game.canvas.moveto(p.shape, p.a, p.b)
+                        game.tetrisgame_win.shadowplaced = 1
+                        return
+        previous_coords1[0], previous_coords1[1] = shadowstamper.squarelist[0].a, shadowstamper.squarelist[0].b
+        previous_coords2[0], previous_coords2[1] = shadowstamper.squarelist[1].a, shadowstamper.squarelist[1].b
+        previous_coords3[0], previous_coords3[1] = shadowstamper.squarelist[2].a, shadowstamper.squarelist[2].b
+        previous_coords4[0], previous_coords4[1] = shadowstamper.squarelist[3].a, shadowstamper.squarelist[3].b        
+    
     
 def game_loop():
     game.current_win.selector_mover(0)
@@ -489,7 +579,7 @@ def game_loop():
                 game.tetrisgame_win.stamper_queue = []
                 clear_shapelists()
                 game.counter = 300
-            time.sleep(0.1)
+            time.sleep(0.01)
             print(game.current_win,"not game", game.counter)
         while game.current_win == game.tetrisgame_win:
             if game.running == False:
@@ -511,7 +601,7 @@ def game_loop():
                 game.tetrisgame_win.stamper_queue.pop(0)
             instance = False
             game.counter += -1
-            time.sleep(0.1)
+            time.sleep(0.01)
             print(game.current_win, game.counter)
             if game.counter == 0:
                 game.counter = 300
@@ -563,27 +653,10 @@ def exit_role(w2):
     print("EXITING")
     sys.exit()
 pause_exitbutton.role = MethodType(exit_role, pause_exitbutton)
-
-game.tetrisgame_win.grid_dict = {}
-for r in range(1,21):
+                        
+for r in range(1,21): # grid creation
     for c in range(1,11):
         game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] = square(r,c,150+(c*25),40+(r*25), "#bfb7b6") 
-
-    # def block_maker():
-        # colorlist = ["cyan", "blue", "orange", "yellow", "green", "#bc8ad0", "red"]
-        # choicelist = ["piece_I", "piece_J", "piece_L", "piece_O", "piece_S", "piece_T", "piece_Z"]
-        # piece = random.choice(choicelist)
-        # index = choicelist.index(piece)
-        # color = colorlist[index]
-        # slist = []
-        # for i in range(0,4):
-            # r = pieces_d[piece][i][0]
-            # c = pieces_d[piece][i][1]
-            # object = square(r,c,150+(c*25),40+(r*25), color)
-            # slist.append(object)        
-        # return slist
-        
-# startbutton.role = MethodType(game.bringtofront(game))
 
 for i in game.mainmenu_win.buttonlist:
     game.mainmenu_win.shapelist.append(i.shape)
