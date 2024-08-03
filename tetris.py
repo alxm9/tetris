@@ -7,6 +7,8 @@ import os
 import threading
 import copy
 
+colors = ["red", "blue", "cyan", "orange", "purple", "green", "yellow"]
+
 pieces_d = { 
             "piece_I" : [  [1,4],  [1,5],  [1,6],  [1,7] ],
             "piece_J" : [  [1,4],  [2,4],  [2,5],  [2,6] ],
@@ -236,35 +238,58 @@ class class_window_game():
                 self.current_matrix["2x2"] = [currstamper.squarelist[2], shadowstamper.squarelist[2] ]
                 self.current_matrix["3x2"] = [currstamper.squarelist[3], shadowstamper.squarelist[3] ]
 
-    def linechecker(self):
-        for r in range(20,0,-1):
+    def linechecker(self, shadowstamper_y_max, shadowstamper_y_min):
+        deleted_rows = []
+        # start = 0 
+        start = int((shadowstamper_y_max - 40) / 25)
+        # for i in shadowstamper.squarelist: # setting the start of the loop, highest y value of the shadowstamper
+            # if i.b > start:
+                # start = i.b
+        print(shadowstamper_y_min, "THIS IS IT")
+        shadowstamper_y_min = int((shadowstamper_y_min - 40) / 25) -1
+        end = 0
+        for r in range(1,20): # setting the end of the loop, last instance of clean rows
+            current_line_color = []
+            for c in range(1,11):
+                current_line_color.append(game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].occupier)  
+            for i in current_line_color:
+                if i != "#bfb7b6":
+                    end = r-1
+                    break
+            else: 
+                continue
+            break
+        print("start/shadowstamper_y_max",start, "\nend, last instance of clean rows",end,"\nShadowstamper_y_min",shadowstamper_y_min)
+
+        found = 0
+        for r in range(start,shadowstamper_y_min,-1):
             current_line_square = []
             current_line_color = []
-            found = 0
             for c in range(10,0,-1):
                 current_line_color.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].occupier )
                 current_line_square.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] )
             if "#bfb7b6" not in current_line_color:
                 found = 1
+                deleted_rows.append(r)
                 print(current_line_square)
                 print(current_line_color)
                 for i in current_line_square:
                     i.occupier = "#bfb7b6"
                     game.canvas.delete(i.shape)
                     i.shape = game.canvas.create_rectangle(i.a, i.b, i.a+25, i.b+25, fill = "#bfb7b6", width=0.25, outline="white")
-                for i in range((r),0,-1): # might wanna change r ?
-                    for d in range(10,0,-1):
-                        # if r+1 == 21:
-                            # continue
+                print("DELETED ROWSSSSS", deleted_rows)
+        if found == 1:
+            delta_y = -1
+            for dr in deleted_rows:
+                delta_y += 1
+                for i in range(dr+delta_y,end,-1): # row
+                    for d in range(10,0,-1): # column
                         if i-1 == 0:
                             return
                         print("SKRRRRRRRRR")
                         square = game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(i,d)]
                         abovesquare = game.tetrisgame_win.grid_dict["sq_{0}_{1}".format( (i-1) ,d)]
-                        # square, abovesquare = abovesquare, square
                         abovesquare.occupier, square.occupier = square.occupier, abovesquare.occupier
-                        # game.canvas.moveto(square.shape, square.a, square.b)
-                        # game.canvas.tag_raise(square.shape)
                     for i in self.grid_dict:
                         grid = self.grid_dict[i]
                         game.canvas.delete(grid.shape) # memory leak?
@@ -277,13 +302,48 @@ class class_window_game():
                         grid = self.grid_dict[i]
                         if grid.occupier != "#bfb7b6":
                             game.canvas.tag_raise(grid.shape)
-                return
-            # if found == 1:
-                # for i in range(500):
-                    # print("AAAAAAAAAAA")
-                # self.linechecker()
+            
+                
+
+    # def linechecker(self): # This loops needlessly through too many empty squares and problems arise when there are more than 1 deleted rows. Need to rethink it.
+        # for r in range(20,0,-1):
+            # current_line_square = []
+            # current_line_color = []
+            # found = 0
+            # for c in range(10,0,-1):
+                # current_line_color.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].occupier )
+                # current_line_square.append( game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)] )
+            # if "#bfb7b6" not in current_line_color:
+                # found = 1
+                # print(current_line_square)
+                # print(current_line_color)
+                # for i in current_line_square:
+                    # i.occupier = "#bfb7b6"
+                    # game.canvas.delete(i.shape)
+                    # i.shape = game.canvas.create_rectangle(i.a, i.b, i.a+25, i.b+25, fill = "#bfb7b6", width=0.25, outline="white")
+                # for i in range((r),0,-1): # might wanna change r ?
+                    # for d in range(10,0,-1):
+                        # if i-1 == 0:
+                            # return
+                        # print("SKRRRRRRRRR")
+                        # square = game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(i,d)]
+                        # abovesquare = game.tetrisgame_win.grid_dict["sq_{0}_{1}".format( (i-1) ,d)]
+                        # abovesquare.occupier, square.occupier = square.occupier, abovesquare.occupier
+                    # for i in self.grid_dict:
+                        # grid = self.grid_dict[i]
+                        # game.canvas.delete(grid.shape) # memory leak?
+                        # ol = "white"
+                        # if grid.occupier != "#bfb7b6":
+                            # ol = "black"
+                        # grid.shape = game.canvas.create_rectangle(grid.a, grid.b, grid.a+25, grid.b+25, fill = grid.occupier, width=0.25, outline=ol)
+                        # game.canvas.tag_raise(grid.shape)
+                    # for i in self.grid_dict:
+                        # grid = self.grid_dict[i]
+                        # if grid.occupier != "#bfb7b6":
+                            # game.canvas.tag_raise(grid.shape)
+                # for i in game.tetrisgame_win.current_stamper.squarelist:
+                    # game.canvas.tag_raise(i.shape)
                 # return
-            # return
     def stamp_maker(self):
         colorlist = ["cyan", "blue", "orange", "yellow", "green", "#bc8ad0", "red"]
         choicelist = ["piece_I", "piece_J", "piece_L", "piece_O", "piece_S", "piece_T", "piece_Z"]
@@ -390,8 +450,14 @@ class stamper():
         self.squarelist = squarelist # we're going to have square instances      
         self.blocktype = blocktype
 
+    def check_rotation(self, direction):
+        pass
+        
     def rotate(self,direction): # a=x b=y
         matrix = game.tetrisgame_win.current_matrix
+        previous_pos = [] # probably don't need this and next 3 lines
+        for i in self.squarelist:
+            previous_pos.append([i.a,i.b])
         if self.blocktype == "piece_O":
             return 
         elif self.blocktype == "piece_I":
@@ -409,6 +475,7 @@ class stamper():
                 rotation2 = [ matrix["1x2"], matrix["2x1"], matrix["3x2"], matrix["2x3"] ]
                 values1 = [ [50, 0] , [0, 50] , [-50, 0] , [0, -50] ]
                 values2 = [ [25, -25] , [25, 25] , [-25, 25] , [-25, -25] ]
+            
             print("THIS IS ROTATION1", rotation1)
             print("THIS IS ROTATION1[0]", rotation1[0], "THIS IS THE LEN OF ROTATION1[0]", len(rotation1[0]))
             for i in range(0,2): # each matrix element holds a list with 2 squares, that of the current_stamper and the shadow_stamper
@@ -421,6 +488,31 @@ class stamper():
                     if len(rotation2[d]) != 0:
                         rotation2[d][i].a += values2[d][0]
                         rotation2[d][i].b += values2[d][1]
+            ##########
+            currentstamper_y_max = 0
+            currentstamper_y_min = 1000
+            currstampsq = game.tetrisgame_win.current_stamper.squarelist
+            for i in currstampsq: 
+                if i.b > currentstamper_y_max:
+                    currentstamper_y_max = i.b      
+            for i in currstampsq:
+                if i.b < currentstamper_y_min:
+                    currentstamper_y_min = i.b
+            print(currentstamper_y_max, currentstamper_y_min)
+            currentstamper_y_max = int((currentstamper_y_max - 40) / 25)
+            currentstamper_y_min = int((currentstamper_y_min - 40) / 25) -1
+            for square in currstampsq:
+                for r in range(currentstamper_y_min, currentstamper_y_max):
+                    for c in range(1,11):
+                        if (game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].a == square.a) and (game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].b == square.b):
+                            if game.tetrisgame_win.grid_dict["sq_{0}_{1}".format(r,c)].occupier != "#bfb7b6":
+                                print("CONFLICT FOUND")
+                                for i in range(0,4):
+                                    print(previous_pos[i])
+                                    self.squarelist[i].a = previous_pos[i][0]
+                                    self.squarelist[i].b = previous_pos[i][1]
+                                return
+                    ########
             for i in game.tetrisgame_win.current_stamper.squarelist:
                 game.canvas.moveto(i.shape, i.a, i.b)
             for i in game.tetrisgame_win.shadow_stamper.squarelist:
@@ -493,6 +585,16 @@ class stamper():
         if game.tetrisgame_win.shadowplaced == 0:
             return
         if game.tetrisgame_win.current_stamper.squarelist[0].b == game.tetrisgame_win.shadow_stamper.squarelist[0].b: # Leak?
+            shadowstamper_y_max = 0
+            shadowstamper_y_min = 1000
+            for i in game.tetrisgame_win.shadow_stamper.squarelist: # setting the start of the loop, highest y value of the shadowstamper
+                if i.b > shadowstamper_y_max:
+                    shadowstamper_y_max = i.b      
+            for i in game.tetrisgame_win.shadow_stamper.squarelist: # setting the start of the loop, highest y value of the shadowstamper
+                if i.b < shadowstamper_y_min:
+                    shadowstamper_y_min = i.b
+            if game.tetrisgame_win.shadow_stamper.blocktype == "piece_I":
+                shadowstamper_y_min += -25
             game.tetrisgame_win.print_piece()
             for i in game.tetrisgame_win.current_stamper.squarelist:
                 game.canvas.delete(i.shape)
@@ -504,13 +606,13 @@ class stamper():
             del game.tetrisgame_win.shadow_stamper
             game.tetrisgame_win.current_stamper = False
             game.tetrisgame_win.shadow_stamper = False
+            game.tetrisgame_win.linechecker(shadowstamper_y_max, shadowstamper_y_min)
         for i in self.squarelist:
             i.b = i.b + delta_y
             game.canvas.moveto(i.shape, i.a, i.b)
             game.canvas.tag_raise(i.shape)
-        game.tetrisgame_win.linechecker()
-        for i in game.tetrisgame_win.current_stamper.squarelist:
-            game.canvas.tag_raise(i.shape)
+        # for i in game.tetrisgame_win.current_stamper.squarelist:
+            # game.canvas.tag_raise(i.shape)
     
     def move_lr(self, delta_x):
         if game.tetrisgame_win.shadowplaced == 0:
