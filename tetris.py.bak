@@ -173,6 +173,23 @@ class class_window():
         self.playername_text += event.char
         self.playername_text.upper()
         self.playername_shape = game.canvas.create_text(300,280,text=self.playername_text, font=("Arial", 12),  fill = "black")
+        
+    # def text_handler(self, event, extra):
+        # print("RUNNING")
+        # self.textpos += 10
+        # if extra == "back":
+            # if len(self.charlist)>0:
+                # game.canvas.delete(self.charlist[-1])
+                # self.charlist.pop()
+                # self.textpos -= 10
+            # else:
+                # self.textpos = 0
+            # return
+        # if len(self.charlist) > 14:
+            # return
+        # if event.char == "i":
+            # self.textpos -= 2
+        # self.charlist.append(game.canvas.create_text(205+self.textpos,280,text=(event.char).upper(), font=("Arial", 12),  fill = "black"))
 
 class class_window_game():    
     def __init__(self,name,color,x1,y1,x2,y2):
@@ -831,6 +848,7 @@ def store_highscore(w3):
     for i in range(2, len(game.highscore_win.shapelist)):
         game.canvas.delete(game.highscore_win.shapelist[i])
     game.highscore_win.scoredict[game.gameover_win.playername_text] = game.tetrisgame_win.score
+    print(game.highscore_win.scoredict)
     game.gameover_win.playername_text = ""
     # for i in len(game.highscore_win.scoredict):
     sortdict = sorted(game.highscore_win.scoredict.items(), key=lambda x:x[1], reverse=True)
