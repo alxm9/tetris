@@ -53,6 +53,14 @@ class tetrisapp():
         if self.current_win == game.mainmenu_win:
             game.interface.unbind("<Key>")
             game.interface.unbind("<BackSpace>")
+            game.tetrisgame_win.level = 1
+            game.tetrisgame_win.score = 0
+            game.canvas.delete(game.tetrisgame_win.level_text)
+            game.canvas.delete(game.tetrisgame_win.score_display)
+            game.tetrisgame_win.level_text = game.canvas.create_text(300,30,text=("Lv.",game.tetrisgame_win.level), font=("Arial", 24))
+            game.tetrisgame_win.score_display = game.canvas.create_text(510,135,text=game.tetrisgame_win.score, font=("Arial", 12),  fill = "white")
+            game.tetrisgame_win.shapelist.append(game.tetrisgame_win.level_text)
+            game.tetrisgame_win.shapelist.append(game.tetrisgame_win.score_display)
             self.game_started = False
             game.tetrisgame_win.stamper_queue = []
             game.interface.bind("<y>", lambda x: print(game.current_win))
@@ -329,9 +337,10 @@ class class_window_game():
             game.tetrisgame_win.score_display = game.canvas.create_text(510,135,text=game.tetrisgame_win.score, font=("Arial", 12),  fill = "white")
             game.tetrisgame_win.shapelist.append(game.tetrisgame_win.score_display)
             if game.tetrisgame_win.level <= game.tetrisgame_win.score/500:
-            # if (game.tetrisgame_win.score != 0) and (game.tetrisgame_win.score % 500 == 0):
                 game.tetrisgame_win.level += 1
-                game.counterbase = game.counterbase - (game.tetrisgame_win.level*10)
+                game.counterbase = 200 - (game.tetrisgame_win.level*15)
+                if game.counterbase < 10:
+                    game.counterbase = 10
                 game.canvas.delete(game.tetrisgame_win.level_text)
                 game.tetrisgame_win.level_text = game.canvas.create_text(300,30,text=("Lv.",game.tetrisgame_win.level), font=("Arial", 24))
                 game.tetrisgame_win.shapelist.append(game.tetrisgame_win.level_text)
@@ -375,8 +384,6 @@ class class_window_game():
     def create_shadowstamper(self):
         slist = []
         for i in self.current_stamper.squarelist:
-            # squarecopy = copy.copy(i)
-            # slist.append(squarecopy)
             shadowsquare = square(i.row, i.column, i.a, i.b, "white")
             slist.append(shadowsquare)
         for d in slist:
